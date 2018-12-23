@@ -1,0 +1,12 @@
+QUESTION 1:
+
+In the introduction of question 1:
+- "The progenies produced from the same parent stock (pure breed) consisted of 218 progenies while those from different parents (cross breed) consisted of 198 progenies."
+---> after exploration of the data I find that the pure breed has 270 progenies and the cross breed 146. Is this maybe a mistake in the assignment, or...?
+ANSWER: Indeed, this was a mistake. Sofie is right, the data   actually contains 270 (pure) and 146 (cross) breeds. Sorry for this situation, however we want to mention that this will not affect the overall results of the project.
+
+Question 2: 
+- "...individual chicken clustered within breeds were measured every week from hatching up to thirteen weeks."
+---> the first measurement is indicated with "week 1". Do we interpret this as a measurement at baseline (hatching up) or is this a measurement at the age of 1 week.
+ANSWER: 
+As for the second question, 1 ( first measurement at hatching )  should be talking as a baseline.
