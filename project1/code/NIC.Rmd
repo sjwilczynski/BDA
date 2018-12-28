@@ -16,7 +16,7 @@ NIC <- read_excel("datasets/NIC.xls")
 
 ```{r utils}
 normalize <- function(x) {
-  return((x - mean(x)) / sd(x))
+  return(x / sd(x))
 }
 ```
 

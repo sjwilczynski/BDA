@@ -2,7 +2,7 @@
     model {
       for (i in 1:N) {
         body_weight[i] ~ dnorm(body.mu[i], body.tau)
-        body.mu[i] <- alpha + beta.breed*breed[i] + beta.age*age[i] + b[id[i],1] + b[id[i],2]*age[i]
+        body.mu[i] <- beta.const + beta.breed*breed[i] + beta.age*age[i] + b[id[i],1] + b[id[i],2]*age[i]
       }
 
       for (i in 1:M) {
@@ -14,12 +14,12 @@
       body.sigma <- 1 / sqrt(body.tau)
 
       # fixed effects
-      alpha ~ dunif(-50, 50)
-      beta.breed ~ dunif(-50, 50)
-      beta.age ~ dunif(-50, 50)
+      beta.const ~ dnorm(0, 1.0E-6)
+      beta.breed ~ dnorm(0, 1.0E-6)
+      beta.age ~ dnorm(0, 1.0E-6)
 
       # random effects
-      b.tau ~ dwish(b_R, 2)
+      b.tau ~ dwish(b_R[1:2,1:2], 2)
       b.sigma2[1:2,1:2]  <- inverse(b.tau[1:2,1:2])
       for (i in 1:2) {
         b.sigma[i] <- sqrt(b.sigma2[i,i])

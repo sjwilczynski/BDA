@@ -16,12 +16,12 @@ cat("
       body.sigma <- 1 / sqrt(body.tau)
 
       # fixed effects
-      beta.const ~ dnorm(0, 1.0E-3)
-      beta.breed ~ dnorm(0, 1.0E-3)
-      beta.age ~ dnorm(0, 1.0E-3)
+      beta.const ~ dnorm(0, 1.0E-6)
+      beta.breed ~ dnorm(0, 1.0E-6)
+      beta.age ~ dnorm(0, 1.0E-6)
 
       # random effects
-      b.tau ~ dwish(b_R, 2)
+      b.tau ~ dwish(b_R[1:2,1:2], 2)
       b.sigma2[1:2,1:2]  <- inverse(b.tau[1:2,1:2])
       for (i in 1:2) {
         b.sigma[i] <- sqrt(b.sigma2[i,i])
@@ -32,7 +32,7 @@ cat("
     }", file="./project1/code/jags-programs/NIC-model1.jag")
 
 NIC_data <- list(
-  body_weight=NIC$bw,
+  body_weight=normalize(NIC$bw),
   breed=NIC$breed,
   age=NIC$age,
   id=NIC$id,
@@ -42,14 +42,34 @@ NIC_data <- list(
   M=length(unique(NIC$id))
 )
 
-# NIC_inits <- list()
+NIC_inits <- list(
+  list(
+    body.tau=22,
+    beta.const=-0.17,
+    beta.breed=-0.1,
+    beta.age=0.2
+  ),
+  list(
+    body.tau=21,
+    beta.const=-0.20,
+    beta.breed=-0.07,
+    beta.age=0.22
+  ),
+  list(
+    body.tau=25,
+    beta.const=-0.15,
+    beta.breed=-0.11,
+    beta.age=0.24
+  )
+)
 
 NIC_model <- jags(
   NIC_data,
   parameters.to.save=c("beta.const", "beta.breed", "beta.age", "body.sigma", "b.sigma", "b.corr"),
-  n.iter=10000,
+  inits=NIC_inits,
+  n.iter=50000,
   n.chains=3,
-  n.burnin=5000,
+  n.burnin=25000,
   model.file="./project1/code/jags-programs/NIC-model1.jag",
   n.thin=1,
   DIC=T
@@ -59,7 +79,7 @@ NIC_model_MCMC <- as.mcmc(NIC_model)
 print(NIC_model)
 plot(NIC_model)
 traceplot(NIC_model)
-superdiag(NIC_model_MCMC)
+superdiag(NIC_model_MCMC, burnin = 10000)
 
 
 
