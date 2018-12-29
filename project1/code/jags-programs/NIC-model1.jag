@@ -25,6 +25,10 @@
         b.sigma[i] <- sqrt(b.sigma2[i,i])
       }
       b.corr <- b.sigma2[1,2]/(b.sigma[1]*b.sigma[2])
+
+      error <- mean(body_weight - body.mu)
+      b.intercept.means <- mean(b[,1])
+      b.slope.means <- mean(b[,2])
       
   
     }

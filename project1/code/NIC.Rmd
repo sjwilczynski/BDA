@@ -9,6 +9,7 @@ output: pdf_document
 # libraries needed for project 1
 library(R2jags)
 library(superdiag)
+library(ggmcmc)
 # NIC dataset loading
 library(readxl)
 NIC <- read_excel("datasets/NIC.xls")
@@ -16,7 +17,7 @@ NIC <- read_excel("datasets/NIC.xls")
 
 ```{r utils}
 normalize <- function(x) {
-  return(x / sd(x))
+  return((x - mean(x)) / sd(x))
 }
 ```
 
