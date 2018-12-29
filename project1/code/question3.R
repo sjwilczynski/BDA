@@ -1,0 +1,114 @@
+set.seed(32)
+
+cat("
+    model {
+      for (i in 1:N) {
+        body_weight[i] ~ dnorm(body.mu[i], body.tau)
+        body_weight.rep[i] ~ dnorm(body.mu[i], body.tau)
+    
+        body.mu[i] <- beta.const + beta.breed*breed[i] + beta.age*age[i] + b[id[i],1] + b[id[i],2]*age[i]
+      }
+      
+      for (i in 1:M) {
+        b[i, 1:2] ~ dmnorm(b_mean[1:2], b.tau[1:2,1:2])
+      }
+      
+      # error SD
+      body.tau ~ dgamma(0.001,0.001)
+      body.sigma <- 1 / sqrt(body.tau)
+      
+      # fixed effects
+      beta.const ~ dnorm(0, 1.0E-6)
+      beta.breed ~ dnorm(0, 1.0E-6)
+      beta.age ~ dnorm(0, 1.0E-6)
+      
+      # random effects
+      b.tau ~ dwish(b_R[1:2,1:2], 2)
+  
+      # tests
+  
+      sample_mean <- mean(body_weight[])
+      sample_sd <- sd(body_weight[])
+      rep_mean <- mean(body_weight.rep[])
+      rep_sd <- sd(body_weight.rep[])
+  
+      # max and min
+      bw.min <- min(body_weight[])
+      bw.max <- max(body_weight[])
+  
+      bw.rep.min <- min(body_weight.rep[])
+      bw.rep.max <- max(body_weight.rep[])
+  
+      test.min <- step(bw.min - bw.rep.min)
+      test.max <- step(bw.max - bw.rep.max)
+  
+      # skewness and kurtosis
+      for (i in 1:N) {
+        sample.pow3[i] <- pow((body_weight[i] - body.mu[i]) / body.sigma, 3)
+        sample.pow4[i] <- pow((body_weight[i] - body.mu[i]) / body.sigma, 4)
+  
+        rep.pow3[i] <- pow((body_weight.rep[i] - body.mu[i]) / body.sigma, 3)
+        rep.pow4[i] <- pow((body_weight.rep[i] - body.mu[i]) / body.sigma, 4)
+      }
+
+      sample.pow3.sum <- sum(sample.pow3[]) / N
+      sample.pow4.sum <- sum(sample.pow4[]) / N - 3
+
+      rep.pow3.sum <- sum(rep.pow3[]) / N
+      rep.pow4.sum <- sum(rep.pow4[]) / N - 3
+
+      test.skewness <- step(rep.pow3.sum - sample.pow3.sum)
+      test.kurtosis <- step(rep.pow4.sum - sample.pow4.sum)
+    
+
+    }", file="./project1/code/jags-programs/NIC-model-PPC.jag")
+
+NIC_data <- list(
+  body_weight=normalize(NIC$bw),
+  breed=normalize(NIC$breed),
+  age=normalize(NIC$age),
+  id=NIC$id,
+  N=nrow(NIC),
+  b_mean=c(0,0),
+  b_R=diag(0.1,2),
+  M=length(unique(NIC$id))
+)
+
+NIC_inits <- list(
+  list(
+    body.tau=22,
+    beta.const=-0.07,
+    beta.breed=-0.05,
+    beta.age=0.8
+  ),
+  list(
+    body.tau=17,
+    beta.const=-0.02,
+    beta.breed=-0.051,
+    beta.age=0.82
+  ),
+  list(
+    body.tau=14,
+    beta.const=-0.1,
+    beta.breed=-0.41,
+    beta.age=0.84
+  )
+)
+
+# model fitting
+NIC_model_question3 <- jags(
+  NIC_data,
+  parameters.to.save=c("test.min", "test.max", "test.skewness", "test.kurtosis"),
+ # inits=NIC_inits,
+  n.iter=50000,
+  n.chains=3,
+  n.burnin=25000,
+  model.file="./project1/code/jags-programs/NIC-model-PPC.jag",
+  n.thin=1,
+  DIC=T
+)
+
+NIC_model_MCMC <- as.mcmc(NIC_model_question3)
+NIC_model_gg <- ggs(NIC_model_MCMC)
+p_D <- NIC_model_gg %>% group_by(Parameter) %>% summarise(Mean=mean(value))
+p_D

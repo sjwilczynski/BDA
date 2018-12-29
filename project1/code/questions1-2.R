@@ -5,6 +5,7 @@ ids <- unique(NIC$id)
 plot(NIC$age[NIC$id==1], NIC$bw[NIC$id==1], "l")
 for (idi in NIC$id) lines(NIC$age[NIC$id==idi], NIC$bw[NIC$id==idi]);
 
+# model for questions 1 and 2
 cat("
     model {
       for (i in 1:N) {
