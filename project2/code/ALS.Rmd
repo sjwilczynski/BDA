@@ -100,9 +100,9 @@ cat("model {
   b.rand.taui[2,2] <- b.rand.sigma[2]
   b.rand.tau <- inverse(b.rand.taui[1:2, 1:2])
   
-  b.rand.sigma[1] ~ dunif(1, 100)
-  b.rand.sigma[2] ~ dunif(1, 100)
-  b.rand.corr ~ dunif(0, 1)
+  b.rand.sigma[1] ~ dunif(0, 100)
+  b.rand.sigma[2] ~ dunif(0, 100)
+  b.rand.corr ~ dunif(-1, 1)
   
   b.rand.int.means <- mean(b.rand[,1])
   b.rand.slp.means <- mean(b.rand[,2])
@@ -242,23 +242,35 @@ als.inits = list(
 ```
 
 ```{r}
-
 test.model <- function(iterations, model.file, monitor=c("b0", "b1", "b.rand.sigma", "b.rand.corr"), data=als.data, inits=als.inits) {
- als.model.jags <- run.jags(model = model.file, data = dump.format(data), monitor = monitor, n.chains = 3, inits = inits, burnin = iterations/3, sample = iterations, keep.jags.files = F, method = "parallel")
+  als.model.jags <- jags(model.file = model.file, data = data, parameters.to.save = monitor, n.chains = 3, inits = inits, n.burnin = iterations/2, n.iter = iterations, n.thin = 1, DIC=T)
  als.model.jags
 }
 
+
+test.model.runjags <- function(iterations, model.file, monitor=c("b0", "b1", "b.rand.sigma", "b.rand.corr", "dic", "pD", "deviance"), data=als.data, inits=als.inits) {
+ als.model.jags <- run.jags(model = model.file, data = dump.format(data), monitor = monitor, n.chains = 3, inits = inits, burnin = iterations/2, sample = iterations, keep.jags.files = F, method = "parallel")
+ als.model.jags
+}
 summarise.model <- function(model, plots.file, iterations) {
+  als.model.mcmc <- as.mcmc(model)
+  als.model.gg <- ggs(als.model.mcmc)
+  summary(model)
+  ggmcmc(als.model.gg, plots.file)
+  superdiag(als.model.mcmc, burnin = iterations/2) 
+}
+
+summarise.model.runjags <- function(model, plots.file, iterations) {
   als.model.mcmc <- as.mcmc.list(model)
   als.model.gg <- ggs(als.model.mcmc)
   summary(model)
   ggmcmc(als.model.gg, plots.file)
-  superdiag(als.model.mcmc, burnin = iterations/3) 
+  superdiag(als.model.mcmc, burnin = iterations/2) 
 }
 ```
 
 ```{r}
-iters=30000
+iters=40000
 als.model <- test.model(iters, "./jags_files/als.model")
 summarise.model(als.model, "./../als_model_plot.pdf", iters)
 ```
@@ -379,6 +391,20 @@ als.norand.inits = list(
 )
 als.norand.model <- test.model(iters, "./jags_files/als.model.norand", data=als.ind.data, inits=als.norand.inits, monitor = c("b0", "b1"))
 summarise.model(als.norand.model, "./../als_model_norand.pdf", iters)
+```
+DIC
+```{r}
+models.jags <- list(als.model, als.small.model, als.unif.model, als.ind.model, als.diag.model, als.slp.model, als.int.model, als.norand.model)
+models.mcmc <- lapply(models.jags, as.mcmc)
+models.ggs <- lapply(models.mcmc, ggs)
+getDIC <- function(model) {
+  model$BUGSoutput$DIC
+}
+DICs <- lapply(models.jags, getDIC)
+
+```
+```{r}
+x <- gelman.diag(models.mcmc[[4]])
 ```
 
 ```{r}
