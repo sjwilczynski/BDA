@@ -242,8 +242,8 @@ als.inits = list(
 ```
 
 ```{r}
-test.model <- function(iterations, model.file, monitor=c("b0", "b1", "b.rand.sigma", "b.rand.corr"), data=als.data, inits=als.inits) {
-  als.model.jags <- jags(model.file = model.file, data = data, parameters.to.save = monitor, n.chains = 3, inits = inits, n.burnin = iterations/2, n.iter = iterations, n.thin = 1, DIC=T)
+test.model <- function(iterations, model.file, monitor=c("b0", "b1", "b.rand.sigma", "b.rand.corr"), data=als.data, inits=als.inits, thin=1) {
+  als.model.jags <- jags(model.file = model.file, data = data, parameters.to.save = monitor, n.chains = 3, inits = inits, n.burnin = iterations/2, n.iter = iterations, n.thin = thin, DIC=T)
  als.model.jags
 }
 
@@ -257,7 +257,6 @@ summarise.model <- function(model, plots.file, iterations) {
   als.model.gg <- ggs(als.model.mcmc)
   summary(model)
   ggmcmc(als.model.gg, plots.file)
-  superdiag(als.model.mcmc, burnin = iterations / 2 - 1) 
 }
 
 summarise.model.runjags <- function(model, plots.file, iterations) {
@@ -265,7 +264,6 @@ summarise.model.runjags <- function(model, plots.file, iterations) {
   als.model.gg <- ggs(als.model.mcmc)
   #summary(model)
   ggmcmc(als.model.gg, plots.file)
-  superdiag(als.model.mcmc, burnin = iterations / 2 -1) 
 }
 ```
 
@@ -406,6 +404,82 @@ DICs <- lapply(models.jags, getDIC)
 DICs[[5]]
 gelman.diag(models.mcmc[[5]])
 ```
+Additional tests
+```{r}
+als.data.wish <- list(
+  bin.score = ALS$bin_score,
+  time = ALS$time,
+  subject_id = ALS$subject_id,
+  N = nrow(ALS),
+  b.rand.mean = c(0, 0),
+  b.R = diag(0.01, 2),
+  M = length(unique(ALS$subject_id))
+)
+cat("model {
+  for(i in 1:N){
+    bin.score[i] ~ dbern(p[i])
+    logit(p[i]) <- b0 + b.rand[subject_id[i], 2] + (b1 + b.rand[subject_id[i], 1]) * time[i]  
+  }
+
+  for (i in 1:M) {
+    b.rand[i, 1:2] ~ dmnorm(b.rand.mean[1:2], b.rand.tau[1:2,1:2])
+  }
+
+  # fixed effects
+  b0 ~ dnorm(0, 1.0E-6)
+  b1 ~ dnorm(0, 1.0E-6)
+  
+  # random effects
+  b.rand.taui[1,1] <- b.rand.sigma[1]
+  b.rand.taui[1,2] <- b.rand.corr
+  b.rand.taui[2,1] <- b.rand.corr
+  b.rand.taui[2,2] <- b.rand.sigma[2]
+  b.rand.tau <- inverse(b.rand.taui[1:2, 1:2])
+  
+  b.rand.sigma[1] ~ dunif(0, 100000)
+  b.rand.sigma[2] ~ dunif(0, 100000)
+  b.rand.corr ~ dunif(-1, 1)
+  
+  b.rand.int.means <- mean(b.rand[,1])
+  b.rand.slp.means <- mean(b.rand[,2])
+}", file="./jags_files/als.model.unif.big")
+
+cat("model {
+  for(i in 1:N){
+    bin.score[i] ~ dbern(p[i])
+    logit(p[i]) <- b.rand[subject_id[i], 2] + b.rand[subject_id[i], 1] * time[i]  
+  }
+
+  for (i in 1:M) {
+    b.rand[i, 1] ~ dnorm(b0, pow(b.rand.sigma, -2))
+    b.rand[i, 2] ~ dnorm(b1, pow(b.rand.sigma, -2))
+  }
+
+  # fixed effects
+  b0 ~ dnorm(0, 1.0E-6)
+  b1 ~ dnorm(0, 1.0E-6)
+  
+  # random effects
+  b.rand.sigma ~ dunif(0, 100)
+  
+  b.rand.int.means <- mean(b.rand[,1])
+  b.rand.slp.means <- mean(b.rand[,2])
+}", file="./jags_files/als.model.diagonal.cent")
+
+als.wish.model <- test.model(iters, "./jags_files/als.model", data=als.data.wish)
+summarise.model(als.wish.model, "./../als_model_wish.pdf", iters)
+
+als.unif.big.model <- test.model(iters, "./jags_files/als.model.unif.big", data=als.unif.data, inits=als.unif.inits)
+summarise.model(als.unif.big.model, "./../als_model_unif_big.pdf", iters)
+
+als.diag.thin.model <- test.model(iters, "./jags_files/als.model.diagonal", data=als.ind.data, inits=als.diag.inits, monitor = c("b0", "b1", "b.rand.sigma"), thin = 10)
+summarise.model(als.diag.thin.model, "./../als_model_diag_thin.pdf", iters)
+
+als.diag.centered.model <- test.model(iters, "./jags_files/als.model.diagonal.cent", data=als.ind.data, inits=als.diag.inits, monitor = c("b0", "b1", "b.rand.sigma"))
+summarise.model(als.diag.centered.model, "./../als_model_diag_centered.pdf", iters)
+
+```
+
 
 ```{r}
 #traceplot
@@ -427,5 +501,6 @@ summary(als.model.mcmc)
 #effective sample size
 effectiveSize(als.model.mcmc)
 ```
+
 
 
