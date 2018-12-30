@@ -1,0 +1,28 @@
+model {
+  for(i in 1:N){
+    bin.score[i] ~ dbern(p[i])
+    logit(p[i]) <- b0 + b.rand[subject_id[i], 2] + (b1 + b.rand[subject_id[i], 1]) * time[i]  
+  }
+
+  for (i in 1:M) {
+    b.rand[i, 1:2] ~ dmnorm(b.rand.mean[1:2], b.rand.tau[1:2,1:2])
+  }
+
+  # fixed effects
+  b0 ~ dnorm(0, 1.0E-6)
+  b1 ~ dnorm(0, 1.0E-6)
+  
+  # random effects
+  b.rand.taui[1,1] <- b.rand.sigma[1]
+  b.rand.taui[1,2] <- b.rand.corr
+  b.rand.taui[2,1] <- b.rand.corr
+  b.rand.taui[2,2] <- b.rand.sigma[2]
+  b.rand.tau <- inverse(b.rand.taui[1:2, 1:2])
+  
+  b.rand.sigma[1] ~ dunif(1, 100)
+  b.rand.sigma[2] ~ dunif(1, 100)
+  b.rand.corr ~ dunif(0, 1)
+  
+  b.rand.int.means <- mean(b.rand[,1])
+  b.rand.slp.means <- mean(b.rand[,2])
+}

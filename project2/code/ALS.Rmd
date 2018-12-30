@@ -7,24 +7,399 @@ output: pdf_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+require(coda)
+require(ggmcmc)
+require(runjags)
+require(lattice)
+require(BBmisc)
+require(R2jags)
+require(superdiag)
+set.seed(42)
+
+
+ALS <- read.table('./../../datasets/ALS.txt',header=T)
+
+#create new ids
+ALS <- transform(ALS, subject_id=as.numeric(factor(subject_id)))
 ```
 
-## R Markdown
+Models
+```{r}
+cat("model {
+  for(i in 1:N){
+    bin.score[i] ~ dbern(p[i])
+    logit(p[i]) <- b0 + b.rand[subject_id[i], 2] + (b1 + b.rand[subject_id[i], 1]) * time[i]  
+  }
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+  for (i in 1:M) {
+    b.rand[i, 1:2] ~ dmnorm(b.rand.mean[1:2], b.rand.tau[1:2,1:2])
+  }
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+  # fixed effects
+  b0 ~ dnorm(0, 1.0E-6)
+  b1 ~ dnorm(0, 1.0E-6)
+  
+  # random effects
+  b.rand.tau ~ dwish(b.R[1:2,1:2], 2)
+  
+  b.rand.sigma2[1:2,1:2]  <- inverse(b.rand.tau[1:2,1:2])
+  for (i in 1:2) {
+    b.rand.sigma[i] <- sqrt(b.rand.sigma2[i,i])
+  }
+  b.rand.corr <- b.rand.sigma2[1,2]/(b.rand.sigma[1]*b.rand.sigma[2])
+  
+  b.rand.int.means <- mean(b.rand[,1])
+  b.rand.slp.means <- mean(b.rand[,2])
+}", file="./jags_files/als.model")
 
-```{r cars}
-summary(cars)
+cat("model {
+  for(i in 1:N){
+    bin.score[i] ~ dbern(p[i])
+    logit(p[i]) <- b0 + b.rand[subject_id[i], 2] + (b1 + b.rand[subject_id[i], 1]) * time[i]  
+  }
+
+  for (i in 1:M) {
+    b.rand[i, 1:2] ~ dmnorm(b.rand.mean[1:2], b.rand.tau[1:2,1:2])
+  }
+
+  # fixed effects
+  b0 ~ dnorm(0, 1.0E-3)
+  b1 ~ dnorm(0, 1.0E-3)
+  
+  # random effects
+  b.rand.tau ~ dwish(b.R[1:2,1:2], 2)
+  
+  b.rand.sigma2[1:2,1:2]  <- inverse(b.rand.tau[1:2,1:2])
+  for (i in 1:2) {
+    b.rand.sigma[i] <- sqrt(b.rand.sigma2[i,i])
+  }
+  b.rand.corr <- b.rand.sigma2[1,2]/(b.rand.sigma[1]*b.rand.sigma[2])
+  
+  b.rand.int.means <- mean(b.rand[,1])
+  b.rand.slp.means <- mean(b.rand[,2])
+}", file="./jags_files/als.model.small.sigma")
+
+cat("model {
+  for(i in 1:N){
+    bin.score[i] ~ dbern(p[i])
+    logit(p[i]) <- b0 + b.rand[subject_id[i], 2] + (b1 + b.rand[subject_id[i], 1]) * time[i]  
+  }
+
+  for (i in 1:M) {
+    b.rand[i, 1:2] ~ dmnorm(b.rand.mean[1:2], b.rand.tau[1:2,1:2])
+  }
+
+  # fixed effects
+  b0 ~ dnorm(0, 1.0E-6)
+  b1 ~ dnorm(0, 1.0E-6)
+  
+  # random effects
+  b.rand.taui[1,1] <- b.rand.sigma[1]
+  b.rand.taui[1,2] <- b.rand.corr
+  b.rand.taui[2,1] <- b.rand.corr
+  b.rand.taui[2,2] <- b.rand.sigma[2]
+  b.rand.tau <- inverse(b.rand.taui[1:2, 1:2])
+  
+  b.rand.sigma[1] ~ dunif(1, 100)
+  b.rand.sigma[2] ~ dunif(1, 100)
+  b.rand.corr ~ dunif(0, 1)
+  
+  b.rand.int.means <- mean(b.rand[,1])
+  b.rand.slp.means <- mean(b.rand[,2])
+}", file="./jags_files/als.model.unif")
+
+cat("model {
+  for(i in 1:N){
+    bin.score[i] ~ dbern(p[i])
+    logit(p[i]) <- b0 + b.rand[subject_id[i], 2] + (b1 + b.rand[subject_id[i], 1]) * time[i]  
+  }
+
+  for (i in 1:M) {
+    b.rand[i, 1] ~ dnorm(0, pow(b.rand.sigma[1], -2))
+    b.rand[i, 2] ~ dnorm(0, pow(b.rand.sigma[2], -2))
+  }
+
+  # fixed effects
+  b0 ~ dnorm(0, 1.0E-6)
+  b1 ~ dnorm(0, 1.0E-6)
+  
+  # random effects
+  b.rand.sigma[1] ~ dunif(0, 100)
+  b.rand.sigma[2] ~ dunif(0, 100)
+  
+  b.rand.int.means <- mean(b.rand[,1])
+  b.rand.slp.means <- mean(b.rand[,2])
+}", file="./jags_files/als.model.independent")
+
+cat("model {
+  for(i in 1:N){
+    bin.score[i] ~ dbern(p[i])
+    logit(p[i]) <- b0 + b.rand[subject_id[i], 2] + (b1 + b.rand[subject_id[i], 1]) * time[i]  
+  }
+
+  for (i in 1:M) {
+    b.rand[i, 1] ~ dnorm(0, pow(b.rand.sigma, -2))
+    b.rand[i, 2] ~ dnorm(0, pow(b.rand.sigma, -2))
+  }
+
+  # fixed effects
+  b0 ~ dnorm(0, 1.0E-6)
+  b1 ~ dnorm(0, 1.0E-6)
+  
+  # random effects
+  b.rand.sigma ~ dunif(0, 100)
+  
+  b.rand.int.means <- mean(b.rand[,1])
+  b.rand.slp.means <- mean(b.rand[,2])
+}", file="./jags_files/als.model.diagonal")
+
+cat("model {
+  for(i in 1:N){
+    bin.score[i] ~ dbern(p[i])
+    logit(p[i]) <- b0 + b.rand[subject_id[i]] + b1 * time[i]  
+  }
+
+  for (i in 1:M) {
+    b.rand[i] ~ dnorm(0, pow(b.rand.sigma, -2))
+  }
+
+  # fixed effects
+  b0 ~ dnorm(0, 1.0E-6)
+  b1 ~ dnorm(0, 1.0E-6)
+  
+  # random effects
+  b.rand.sigma ~ dunif(0, 100)
+
+}", file="./jags_files/als.model.int")
+
+cat("model {
+  for(i in 1:N){
+    bin.score[i] ~ dbern(p[i])
+    logit(p[i]) <- b0 + (b.rand[subject_id[i]] + b1) * time[i]  
+  }
+
+  for (i in 1:M) {
+    b.rand[i] ~ dnorm(0, pow(b.rand.sigma, -2))
+  }
+
+  # fixed effects
+  b0 ~ dnorm(0, 1.0E-6)
+  b1 ~ dnorm(0, 1.0E-6)
+  
+  # random effects
+  b.rand.sigma ~ dunif(0, 100)
+
+}", file="./jags_files/als.model.slp")
+
+cat("model {
+  for(i in 1:N){
+    bin.score[i] ~ dbern(p[i])
+    logit(p[i]) <- b0 +  b1 * time[i]  
+  }
+
+  # fixed effects
+  b0 ~ dnorm(0, 1.0E-6)
+  b1 ~ dnorm(0, 1.0E-6)
+
+}", file="./jags_files/als.model.norand")
+
 ```
 
-## Including Plots
 
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r}
+als.data <- list(
+  bin.score = ALS$bin_score,
+  time = ALS$time,
+  subject_id = ALS$subject_id,
+  N = nrow(ALS),
+  b.rand.mean = c(0, 0),
+  b.R = diag(0.1, 2),
+  M = length(unique(ALS$subject_id))
+)
+als.inits = list(
+  list(
+    b0=0.5,
+    b1=-8,
+    b.rand.tau=structure(
+    .Data=c(0.2, 0.0,0.0, 0.2),
+    .Dim=c(2,2))
+  ),
+  list(
+    b0=0.4,
+    b1=-7,
+    b.rand.tau=structure(
+    .Data=c(0.1, 0.0,0.0, 0.1),
+    .Dim=c(2,2))
+  ),
+  list(
+    b0=0.6,
+    b1=-9,
+    b.rand.tau=structure(
+    .Data=c(0.3, 0.0,0.0, 0.3),
+    .Dim=c(2,2))
+  )
+)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r}
+
+test.model <- function(iterations, model.file, monitor=c("b0", "b1", "b.rand.sigma", "b.rand.corr"), data=als.data, inits=als.inits) {
+ als.model.jags <- run.jags(model = model.file, data = dump.format(data), monitor = monitor, n.chains = 3, inits = inits, burnin = iterations/3, sample = iterations, keep.jags.files = F, method = "parallel")
+ als.model.jags
+}
+
+summarise.model <- function(model, plots.file, iterations) {
+  als.model.mcmc <- as.mcmc.list(model)
+  als.model.gg <- ggs(als.model.mcmc)
+  summary(model)
+  ggmcmc(als.model.gg, plots.file)
+  superdiag(als.model.mcmc, burnin = iterations/3) 
+}
+```
+
+```{r}
+iters=30000
+als.model <- test.model(iters, "./jags_files/als.model")
+summarise.model(als.model, "./../als_model_plot.pdf", iters)
+```
+```{r}
+als.small.model <- test.model(iters, "./jags_files/als.model.small.sigma")
+summarise.model(als.small.model, "./../als_model_small_sigma_plot.pdf", iters)
+```
+```{r}
+als.unif.data <- list(
+  bin.score = ALS$bin_score,
+  time = ALS$time,
+  subject_id = ALS$subject_id,
+  N = nrow(ALS),
+  b.rand.mean = c(0, 0),
+  M = length(unique(ALS$subject_id))
+)
+als.unif.inits = list(
+  list(
+    b0=0.5,
+    b1=-8,
+    b.rand.sigma = c(6,6),
+    b.rand.corr = 0.3
+  ),
+  list(
+    b0=0.4,
+    b1=-7,
+    b.rand.sigma = c(7,7),
+    b.rand.corr = 0.4
+  ),
+  list(
+    b0=0.6,
+    b1=-9,
+    b.rand.sigma = c(8,8),
+    b.rand.corr = 0.5
+  )
+)
+als.unif.model <- test.model(iters, "./jags_files/als.model.unif", data=als.unif.data, inits=als.unif.inits)
+summarise.model(als.unif.model, "./../als_model_unif.pdf", iters)
+```
+
+
+```{r}
+als.ind.data <- list(
+  bin.score = ALS$bin_score,
+  time = ALS$time,
+  subject_id = ALS$subject_id,
+  N = nrow(ALS),
+  M = length(unique(ALS$subject_id))
+)
+als.ind.inits = list(
+  list(
+    b0=0.5,
+    b1=-8,
+    b.rand.sigma = c(6,6)
+  ),
+  list(
+    b0=0.4,
+    b1=-7,
+    b.rand.sigma = c(7,7)
+  ),
+  list(
+    b0=0.6,
+    b1=-9,
+    b.rand.sigma = c(8,8)
+  )
+)
+als.ind.model <- test.model(iters, "./jags_files/als.model.independent", data=als.ind.data, inits=als.ind.inits, monitor = c("b0", "b1", "b.rand.sigma"))
+summarise.model(als.ind.model, "./../als_model_ind.pdf", iters)
+```
+
+```{r}
+als.diag.inits = list(
+  list(
+    b0=0.5,
+    b1=-8,
+    b.rand.sigma = 6
+  ),
+  list(
+    b0=0.4,
+    b1=-7,
+    b.rand.sigma = 7
+  ),
+  list(
+    b0=0.6,
+    b1=-9,
+    b.rand.sigma = 8
+  )
+)
+als.diag.model <- test.model(iters, "./jags_files/als.model.diagonal", data=als.ind.data, inits=als.diag.inits, monitor = c("b0", "b1", "b.rand.sigma"))
+summarise.model(als.diag.model, "./../als_model_diag.pdf", iters)
+```
+
+```{r}
+als.int.model <- test.model(iters, "./jags_files/als.model.int", data=als.ind.data, inits=als.diag.inits, monitor = c("b0", "b1", "b.rand.sigma"))
+summarise.model(als.int.model, "./../als_model_int.pdf", iters)
+```
+
+
+```{r}
+als.slp.model <- test.model(iters, "./jags_files/als.model.slp", data=als.ind.data, inits=als.diag.inits, monitor = c("b0", "b1", "b.rand.sigma"))
+summarise.model(als.slp.model, "./../als_model_slp.pdf", iters)
+```
+
+```{r}
+als.norand.inits = list(
+  list(
+    b0=0.5,
+    b1=-8
+  ),
+  list(
+    b0=0.4,
+    b1=-7
+  ),
+  list(
+    b0=0.6,
+    b1=-9
+  )
+)
+als.norand.model <- test.model(iters, "./jags_files/als.model.norand", data=als.ind.data, inits=als.norand.inits, monitor = c("b0", "b1"))
+summarise.model(als.norand.model, "./../als_model_norand.pdf", iters)
+```
+
+```{r}
+#traceplot
+ggs_traceplot(als.model.gg)
+#autocorrelation plo
+ggs_autocorrelation(als.model.gg)+theme_classic()
+#running mean
+ggs_running(als.model.gg) + theme_classic()
+#cross-correlation plot
+ggs_crosscorrelation(als.model.gg) + theme_classic()
+#geweke diagnostic
+ggs_geweke(als.model.gg,frac1=0.1,frac2=0.5) + theme_classic()
+#BGR diagnostics version 1(R_c)
+ggs_Rhat(als.model.gg)+ theme_classic()
+#BGR diagnostic version 2
+gelman.plot(als.model.mcmc)
+#time series approach to estimating monte carlo standard error(MCSE)
+summary(als.model.mcmc)
+#effective sample size
+effectiveSize(als.model.mcmc)
+```
+
+

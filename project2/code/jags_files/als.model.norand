@@ -1,0 +1,11 @@
+model {
+  for(i in 1:N){
+    bin.score[i] ~ dbern(p[i])
+    logit(p[i]) <- b0 +  b1 * time[i]  
+  }
+
+  # fixed effects
+  b0 ~ dnorm(0, 1.0E-6)
+  b1 ~ dnorm(0, 1.0E-6)
+
+}

@@ -1,0 +1,18 @@
+model {
+  for(i in 1:N){
+    bin.score[i] ~ dbern(p[i])
+    logit(p[i]) <- b0 + (b.rand[subject_id[i]] + b1) * time[i]  
+  }
+
+  for (i in 1:M) {
+    b.rand[i] ~ dnorm(0, pow(b.rand.sigma, -2))
+  }
+
+  # fixed effects
+  b0 ~ dnorm(0, 1.0E-6)
+  b1 ~ dnorm(0, 1.0E-6)
+  
+  # random effects
+  b.rand.sigma ~ dunif(0, 100)
+
+}
