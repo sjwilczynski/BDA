@@ -257,15 +257,15 @@ summarise.model <- function(model, plots.file, iterations) {
   als.model.gg <- ggs(als.model.mcmc)
   summary(model)
   ggmcmc(als.model.gg, plots.file)
-  superdiag(als.model.mcmc, burnin = iterations/2) 
+  superdiag(als.model.mcmc, burnin = iterations / 2 - 1) 
 }
 
 summarise.model.runjags <- function(model, plots.file, iterations) {
   als.model.mcmc <- as.mcmc.list(model)
   als.model.gg <- ggs(als.model.mcmc)
-  summary(model)
+  #summary(model)
   ggmcmc(als.model.gg, plots.file)
-  superdiag(als.model.mcmc, burnin = iterations/2) 
+  superdiag(als.model.mcmc, burnin = iterations / 2 -1) 
 }
 ```
 
@@ -401,10 +401,10 @@ getDIC <- function(model) {
   model$BUGSoutput$DIC
 }
 DICs <- lapply(models.jags, getDIC)
-
 ```
 ```{r}
-x <- gelman.diag(models.mcmc[[4]])
+DICs[[5]]
+gelman.diag(models.mcmc[[5]])
 ```
 
 ```{r}
