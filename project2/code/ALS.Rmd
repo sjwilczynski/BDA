@@ -28,7 +28,7 @@ Models
 cat("model {
   for(i in 1:N){
     bin.score[i] ~ dbern(p[i])
-    logit(p[i]) <- b0 + b.rand[subject_id[i], 2] + (b1 + b.rand[subject_id[i], 1]) * time[i]  
+    logit(p[i]) <- b0 + b.rand[subject_id[i], 1] + (b1 + b.rand[subject_id[i], 2]) * time[i]  
   }
 
   for (i in 1:M) {
@@ -55,7 +55,7 @@ cat("model {
 cat("model {
   for(i in 1:N){
     bin.score[i] ~ dbern(p[i])
-    logit(p[i]) <- b0 + b.rand[subject_id[i], 2] + (b1 + b.rand[subject_id[i], 1]) * time[i]  
+    logit(p[i]) <- b0 + b.rand[subject_id[i], 1] + (b1 + b.rand[subject_id[i], 2]) * time[i]  
   }
 
   for (i in 1:M) {
@@ -82,7 +82,7 @@ cat("model {
 cat("model {
   for(i in 1:N){
     bin.score[i] ~ dbern(p[i])
-    logit(p[i]) <- b0 + b.rand[subject_id[i], 2] + (b1 + b.rand[subject_id[i], 1]) * time[i]  
+    logit(p[i]) <- b0 + b.rand[subject_id[i], 1] + (b1 + b.rand[subject_id[i], 2]) * time[i]  
   }
 
   for (i in 1:M) {
@@ -94,10 +94,10 @@ cat("model {
   b1 ~ dnorm(0, 1.0E-6)
   
   # random effects
-  b.rand.taui[1,1] <- b.rand.sigma[1]
-  b.rand.taui[1,2] <- b.rand.corr
-  b.rand.taui[2,1] <- b.rand.corr
-  b.rand.taui[2,2] <- b.rand.sigma[2]
+  b.rand.taui[1,1] <- pow(b.rand.sigma[1],2)
+  b.rand.taui[1,2] <- b.rand.corr * b.rand.sigma[1] * b.rand.sigma[2]
+  b.rand.taui[2,1] <- b.rand.corr * b.rand.sigma[1] * b.rand.sigma[2]
+  b.rand.taui[2,2] <- pow(b.rand.sigma[2], 2)
   b.rand.tau <- inverse(b.rand.taui[1:2, 1:2])
   
   b.rand.sigma[1] ~ dunif(0, 100)
@@ -111,7 +111,7 @@ cat("model {
 cat("model {
   for(i in 1:N){
     bin.score[i] ~ dbern(p[i])
-    logit(p[i]) <- b0 + b.rand[subject_id[i], 2] + (b1 + b.rand[subject_id[i], 1]) * time[i]  
+    logit(p[i]) <- b0 + b.rand[subject_id[i], 1] + (b1 + b.rand[subject_id[i], 2]) * time[i]  
   }
 
   for (i in 1:M) {
@@ -134,7 +134,7 @@ cat("model {
 cat("model {
   for(i in 1:N){
     bin.score[i] ~ dbern(p[i])
-    logit(p[i]) <- b0 + b.rand[subject_id[i], 2] + (b1 + b.rand[subject_id[i], 1]) * time[i]  
+    logit(p[i]) <- b0 + b.rand[subject_id[i], 1] + (b1 + b.rand[subject_id[i], 2]) * time[i]  
   }
 
   for (i in 1:M) {
@@ -418,7 +418,7 @@ als.data.wish <- list(
 cat("model {
   for(i in 1:N){
     bin.score[i] ~ dbern(p[i])
-    logit(p[i]) <- b0 + b.rand[subject_id[i], 2] + (b1 + b.rand[subject_id[i], 1]) * time[i]  
+    logit(p[i]) <- b0 + b.rand[subject_id[i], 1] + (b1 + b.rand[subject_id[i], 2]) * time[i]  
   }
 
   for (i in 1:M) {
@@ -430,10 +430,10 @@ cat("model {
   b1 ~ dnorm(0, 1.0E-6)
   
   # random effects
-  b.rand.taui[1,1] <- b.rand.sigma[1]
-  b.rand.taui[1,2] <- b.rand.corr
-  b.rand.taui[2,1] <- b.rand.corr
-  b.rand.taui[2,2] <- b.rand.sigma[2]
+  b.rand.taui[1,1] <- pow(b.rand.sigma[1],2)
+  b.rand.taui[1,2] <- b.rand.corr * b.rand.sigma[1] * b.rand.sigma[2]
+  b.rand.taui[2,1] <- b.rand.corr * b.rand.sigma[1] * b.rand.sigma[2]
+  b.rand.taui[2,2] <- pow(b.rand.sigma[2], 2)
   b.rand.tau <- inverse(b.rand.taui[1:2, 1:2])
   
   b.rand.sigma[1] ~ dunif(0, 100000)
@@ -447,7 +447,7 @@ cat("model {
 cat("model {
   for(i in 1:N){
     bin.score[i] ~ dbern(p[i])
-    logit(p[i]) <- b.rand[subject_id[i], 2] + b.rand[subject_id[i], 1] * time[i]  
+    logit(p[i]) <- b.rand[subject_id[i], 1] + b.rand[subject_id[i], 2] * time[i]  
   }
 
   for (i in 1:M) {
@@ -477,6 +477,15 @@ summarise.model(als.diag.thin.model, "./../als_model_diag_thin.pdf", iters)
 
 als.diag.centered.model <- test.model(iters, "./jags_files/als.model.diagonal.cent", data=als.ind.data, inits=als.diag.inits, monitor = c("b0", "b1", "b.rand.sigma"))
 summarise.model(als.diag.centered.model, "./../als_model_diag_centered.pdf", iters)
+
+```
+```{r}
+print(summary(as.mcmc(als.unif.big.model))$statistics)
+print(summary(as.mcmc(als.unif.model))$statistics)
+print(summary(as.mcmc(als.model))$statistics)
+print(summary(as.mcmc(als.wish.model))$statistics)
+print(summary(as.mcmc(als.small.model))$statistics)
+print(summary(as.mcmc(als.diag.model))$statistics)
 
 ```
 

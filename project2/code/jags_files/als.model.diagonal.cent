@@ -1,7 +1,7 @@
 model {
   for(i in 1:N){
     bin.score[i] ~ dbern(p[i])
-    logit(p[i]) <- b.rand[subject_id[i], 2] + b.rand[subject_id[i], 1] * time[i]  
+    logit(p[i]) <- b.rand[subject_id[i], 1] + b.rand[subject_id[i], 2] * time[i]  
   }
 
   for (i in 1:M) {
