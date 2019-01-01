@@ -255,7 +255,7 @@ test.model.runjags <- function(iterations, model.file, monitor=c("b0", "b1", "b.
 summarise.model <- function(model, plots.file, iterations) {
   als.model.mcmc <- as.mcmc(model)
   als.model.gg <- ggs(als.model.mcmc)
-  summary(model)
+  #summary(model)
   ggmcmc(als.model.gg, plots.file)
 }
 
@@ -510,6 +510,7 @@ summary(als.model.mcmc)
 #effective sample size
 effectiveSize(als.model.mcmc)
 ```
+
 
 
 
