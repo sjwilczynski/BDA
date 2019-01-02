@@ -1,0 +1,319 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+require(coda)
+require(ggmcmc)
+require(runjags)
+require(lattice)
+require(BBmisc)
+require(R2jags)
+require(superdiag)
+set.seed(42)
+
+
+ALS <- read.table('./../../datasets/ALS.txt',header=T)
+
+#create new ids
+ALS <- transform(ALS, subject_id=as.numeric(factor(subject_id)))
+
+
+iters=50000
+
+```
+
+```{r}
+cat("model {
+  for(i in 1:N){
+    bin.score[i] ~ dbern(p[i])
+    logit(p[i]) <- 
+      b0 + b.rand[subject_id[i], 1] + b0_sex * sex[i] + b0_age*age[i] + 
+      (b1 + b.rand[subject_id[i], 2] + b1_sex * sex[i]+b1_age*age[i]) * time[i]
+  }
+
+  for (i in 1:M) {
+    b.rand[i, 1] ~ dnorm(0, pow(b.rand.sigma, -2))
+    b.rand[i, 2] ~ dnorm(0, pow(b.rand.sigma, -2))
+  }
+
+  # fixed effects
+  b0 ~ dnorm(0, 1.0E-6)
+  b1 ~ dnorm(0, 1.0E-6)
+  b0_sex ~ dnorm(0, 1.0E-6)
+  b1_sex ~ dnorm(0, 1.0E-6)
+  b0_age ~ dnorm(0, 1.0E-6)
+  b1_age ~ dnorm(0, 1.0E-6)
+
+  # random effects
+  b.rand.sigma ~ dunif(0, 100)
+  
+  b.rand.int.means <- mean(b.rand[,1])
+  b.rand.slp.means <- mean(b.rand[,2])
+}", file="./jags1_files/model12")
+
+cat("model {
+  for(i in 1:N){
+    bin.score[i] ~ dbern(p[i])
+    logit(p[i]) <- 
+      b0 + b.rand[subject_id[i], 1] + b0_age*age[i] + 
+      (b1 + b.rand[subject_id[i], 2] + b1_age*age[i]+b1_treatment*treatment[i]) * time[i]
+  }
+
+  for (i in 1:M) {
+    b.rand[i, 1] ~ dnorm(0, pow(b.rand.sigma, -2))
+    b.rand[i, 2] ~ dnorm(0, pow(b.rand.sigma, -2))
+  }
+
+  # fixed effects
+  b0 ~ dnorm(0, 1.0E-6)
+  b1 ~ dnorm(0, 1.0E-6)
+  b0_age ~ dnorm(0, 1.0E-6)
+  b1_age ~ dnorm(0, 1.0E-6)
+  b1_treatment ~ dnorm(0, 1.0E-6)
+
+  # random effects
+  b.rand.sigma ~ dunif(0, 100)
+  
+  b.rand.int.means <- mean(b.rand[,1])
+  b.rand.slp.means <- mean(b.rand[,2])
+}", file="./jags1_files/model23")
+
+cat("model {
+  for(i in 1:N){
+    bin.score[i] ~ dbern(p[i])
+    logit(p[i]) <- 
+      b0 + b.rand[subject_id[i], 1] + b0_sex * sex[i] + 
+      (b1 + b.rand[subject_id[i], 2] + b1_sex * sex[i]+b1_treatment*treatment[i]) * time[i]
+  }
+
+  for (i in 1:M) {
+    b.rand[i, 1] ~ dnorm(0, pow(b.rand.sigma, -2))
+    b.rand[i, 2] ~ dnorm(0, pow(b.rand.sigma, -2))
+  }
+
+  # fixed effects
+  b0 ~ dnorm(0, 1.0E-6)
+  b1 ~ dnorm(0, 1.0E-6)
+  b0_sex ~ dnorm(0, 1.0E-6)
+  b1_sex ~ dnorm(0, 1.0E-6)
+  b1_treatment ~ dnorm(0, 1.0E-6)
+
+
+  # random effects
+  b.rand.sigma ~ dunif(0, 100)
+  
+  b.rand.int.means <- mean(b.rand[,1])
+  b.rand.slp.means <- mean(b.rand[,2])
+}", file="./jags1_files/model13")
+
+cat("model {
+  for(i in 1:N){
+    bin.score[i] ~ dbern(p[i])
+    logit(p[i]) <- 
+      b0 + b.rand[subject_id[i], 1] + b0_sex * sex[i] +
+      (b1 + b.rand[subject_id[i], 2] + b1_sex * sex[i]) * time[i]
+  }
+
+  for (i in 1:M) {
+    b.rand[i, 1] ~ dnorm(0, pow(b.rand.sigma, -2))
+    b.rand[i, 2] ~ dnorm(0, pow(b.rand.sigma, -2))
+  }
+
+  # fixed effects
+  b0 ~ dnorm(0, 1.0E-6)
+  b1 ~ dnorm(0, 1.0E-6)
+  b0_sex ~ dnorm(0, 1.0E-6)
+  b1_sex ~ dnorm(0, 1.0E-6)
+
+  # random effects
+  b.rand.sigma ~ dunif(0, 100)
+  
+  b.rand.int.means <- mean(b.rand[,1])
+  b.rand.slp.means <- mean(b.rand[,2])
+}", file="./jags1_files/model1")
+
+cat("model {
+  for(i in 1:N){
+    bin.score[i] ~ dbern(p[i])
+    logit(p[i]) <- 
+      b0 + b.rand[subject_id[i], 1] + b0_age*age[i] + 
+      (b1 + b.rand[subject_id[i], 2] + b1_age*age[i]) * time[i]
+  }
+
+  for (i in 1:M) {
+    b.rand[i, 1] ~ dnorm(0, pow(b.rand.sigma, -2))
+    b.rand[i, 2] ~ dnorm(0, pow(b.rand.sigma, -2))
+  }
+
+  # fixed effects
+  b0 ~ dnorm(0, 1.0E-6)
+  b1 ~ dnorm(0, 1.0E-6)
+  b0_age ~ dnorm(0, 1.0E-6)
+  b1_age ~ dnorm(0, 1.0E-6)
+
+  # random effects
+  b.rand.sigma ~ dunif(0, 100)
+  
+  b.rand.int.means <- mean(b.rand[,1])
+  b.rand.slp.means <- mean(b.rand[,2])
+}", file="./jags1_files/model2")
+
+cat("model {
+  for(i in 1:N){
+    bin.score[i] ~ dbern(p[i])
+    logit(p[i]) <- 
+      b0 + b.rand[subject_id[i], 1] + 
+      (b1 + b.rand[subject_id[i], 2] + b1_treatment*treatment[i]) * time[i]
+  }
+
+  for (i in 1:M) {
+    b.rand[i, 1] ~ dnorm(0, pow(b.rand.sigma, -2))
+    b.rand[i, 2] ~ dnorm(0, pow(b.rand.sigma, -2))
+  }
+
+  # fixed effects
+  b0 ~ dnorm(0, 1.0E-6)
+  b1 ~ dnorm(0, 1.0E-6)
+  b1_treatment ~ dnorm(0, 1.0E-6)
+
+
+  # random effects
+  b.rand.sigma ~ dunif(0, 100)
+  
+  b.rand.int.means <- mean(b.rand[,1])
+  b.rand.slp.means <- mean(b.rand[,2])
+}", file="./jags1_files/model3")
+```
+
+```{r}
+als.data <- list(
+  bin.score = ALS$bin_score,
+  time = ALS$time,
+  sex = ALS$gender,
+  age = ALS$Age,
+  treatment = ALS$treatment,
+  subject_id = ALS$subject_id,
+  N = nrow(ALS),
+  b.rand.mean = c(0, 0),
+  b.R = diag(0.1, 2),
+  M = length(unique(ALS$subject_id))
+)
+als.inits = list(
+  list(
+    b0=0.5,
+    b1=-8,
+    b0_sex=0.5,
+    b1_sex = -8,
+    b.rand.sigma = 7
+  ),
+  list(
+    b0=0.4,
+    b1=-7,
+    b0_sex = 0.4,
+    b1_sex = -7,
+    b.rand.sigma = 8
+  ),
+  list(
+    b0=0.6,
+    b1=-9,
+    b0_sex = 0.6,
+    b1_sex = -9,
+    b.rand.sigma = 9
+  )
+)
+
+alsSt.data <- list(
+  bin.score = ALS$bin_score,
+  time = ALS$time,
+  sex = ALS$gender,
+  age = ALS$Age <- (ALS$Age - mean(ALS$Age)) / sd(ALS$Age),
+  treatment = ALS$treatment,
+  subject_id = ALS$subject_id,
+  N = nrow(ALS),
+  b.rand.mean = c(0, 0),
+  b.R = diag(0.1, 2),
+  M = length(unique(ALS$subject_id))
+)
+alsSt.inits = als.inits
+```
+
+```{r}
+test.model <- function(iterations, model.file, monitor=c("b0", "b1", "b0_sex", "b1_sex", "b0_age", "b1_age", "b1_treatment", "b.rand.sigma", "b.rand.corr"), data=als.data, inits=als.inits) {
+  als.model.jags <- jags(model.file = model.file, data = data, parameters.to.save = monitor, n.chains = 3, inits = inits, n.burnin = iterations/2, n.iter = iterations, n.thin = 1, DIC=T)
+ als.model.jags
+}
+
+
+test.model.runjags <- function(iterations, model.file, monitor=c("b0", "b1", "b0_sex", "b1_sex", "b0_age", "b1_age", "b1_treatment", "b.rand.sigma", "b.rand.corr", "dic", "pD", "deviance"), data=als.data, inits=als.inits) {
+ als.model.jags <- run.jags(model = model.file, data = dump.format(data), monitor = monitor, n.chains = 3, inits = inits, burnin = iterations/2, sample = iterations, keep.jags.files = F, method = "parallel")
+ als.model.jags
+}
+summarise.model <- function(model, plots.file, iterations) {
+  als.model.mcmc <- as.mcmc(model)
+  als.model.gg <- ggs(als.model.mcmc)
+  summary(model)
+  ggmcmc(als.model.gg, plots.file)
+  superdiag(als.model.mcmc, burnin = iterations/2-1) 
+}
+
+summarise.model.runjags <- function(model, plots.file, iterations) {
+  als.model.mcmc <- as.mcmc.list(model)
+  als.model.gg <- ggs(als.model.mcmc)
+  summary(model)
+  ggmcmc(als.model.gg, plots.file)
+  superdiag(als.model.mcmc, burnin = iterations/2-1) 
+}
+```
+
+All variables and standarized Age
+```{r}
+als.model12 <- test.model(iters, "./jags1_files/model12", monitor=c("b0", "b1", "b0_sex", "b1_sex", "b0_age", "b1_age", "b.rand.sigma", "b.rand.corr"))
+summarise.model(als.model12, "./../model12.pdf", iters)
+
+als.model23 <- test.model(iters, "./jags1_files/model23", monitor=c("b0", "b1", "b0_age", "b1_age", "b1_treatment", "b.rand.sigma", "b.rand.corr"), data=als.data, inits = als.inits)
+summarise.model(als.model23, "./../model23.pdf", iters)
+
+als.model13 <- test.model(iters, "./jags1_files/model13", monitor=c("b0", "b1", "b0_sex", "b1_sex", "b1_treatment", "b.rand.sigma", "b.rand.corr"))
+summarise.model(als.model13, "./../model13.pdf", iters)
+
+als.model1 <- test.model(iters, "./jags1_files/model1", monitor=c("b0", "b1", "b0_sex", "b1_sex", "b.rand.sigma", "b.rand.corr"))
+summarise.model(als.model1, "./../model1.pdf", iters)
+
+als.model2 <- test.model(iters, "./jags1_files/model2", monitor=c("b0", "b1", "b0_age", "b1_age", "b.rand.sigma", "b.rand.corr"))
+summarise.model(als.model2, "./../model2.pdf", iters)
+
+als.model3 <- test.model(iters, "./jags1_files/model3", monitor=c("b0", "b1", "b1_treatment", "b.rand.sigma", "b.rand.corr"), data=als.data, inits = als.inits)
+summarise.model(als.model3, "./../model3.pdf", iters)
+
+
+```
+
+DIC
+```{r}
+models.jags <- list(als.model12, als.model23, als.model13, als.model1, als.model2, als.model3)
+models.mcmc <- lapply(models.jags, as.mcmc)
+models.ggs <- lapply(models.mcmc, ggs)
+getDIC <- function(model) {
+  model$BUGSoutput$DIC
+}
+DICs <- lapply(models.jags, getDIC)
+
+```
+```{r}
+x <- gelman.diag(models.mcmc[[6]])
+```
+```{r}
+y<- lapply(models.jags, getDIC)
+```
+
