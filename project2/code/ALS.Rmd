@@ -219,23 +219,23 @@ als.data <- list(
 als.inits = list(
   list(
     b0=0.5,
-    b1=-8,
+    b1=-11,
     b.rand.tau=structure(
-    .Data=c(0.2, 0.0,0.0, 0.2),
+    .Data=c(0.02, 0.0,0.0, 0.02),
     .Dim=c(2,2))
   ),
   list(
     b0=0.4,
-    b1=-7,
+    b1=-11,
     b.rand.tau=structure(
-    .Data=c(0.1, 0.0,0.0, 0.1),
+    .Data=c(0.01, 0.0,0.0, 0.01),
     .Dim=c(2,2))
   ),
   list(
     b0=0.6,
-    b1=-9,
+    b1=-12,
     b.rand.tau=structure(
-    .Data=c(0.3, 0.0,0.0, 0.3),
+    .Data=c(0.03, 0.0,0.0, 0.03),
     .Dim=c(2,2))
   )
 )
@@ -268,7 +268,7 @@ summarise.model.runjags <- function(model, plots.file, iterations) {
 ```
 
 ```{r}
-iters=40000
+iters=50000
 als.model <- test.model(iters, "./jags_files/als.model")
 summarise.model(als.model, "./../als_model_plot.pdf", iters)
 ```
@@ -398,10 +398,16 @@ models.ggs <- lapply(models.mcmc, ggs)
 getDIC <- function(model) {
   model$BUGSoutput$DIC
 }
+getPD <- function(model) {
+  model$BUGSoutput$pD
+} 
 DICs <- lapply(models.jags, getDIC)
+pDs <- lapply(models.jags, getPD)
 ```
+
 ```{r}
 DICs[[5]]
+als.diag.model$BUGSoutput$pD
 gelman.diag(models.mcmc[[5]])
 ```
 Additional tests
@@ -486,31 +492,38 @@ print(summary(as.mcmc(als.model))$statistics)
 print(summary(as.mcmc(als.wish.model))$statistics)
 print(summary(as.mcmc(als.small.model))$statistics)
 print(summary(as.mcmc(als.diag.model))$statistics)
-
 ```
 
 
 ```{r}
+model.mcmc = as.mcmc(als.wish.model)
+model.ggs = ggs(model.mcmc)
 #traceplot
-ggs_traceplot(als.model.gg)
+ggs_traceplot(model.ggs)
 #autocorrelation plo
-ggs_autocorrelation(als.model.gg)+theme_classic()
+ggs_autocorrelation(model.ggs)
 #running mean
-ggs_running(als.model.gg) + theme_classic()
+ggs_running(model.ggs)
 #cross-correlation plot
-ggs_crosscorrelation(als.model.gg) + theme_classic()
+ggs_crosscorrelation(model.ggs)
+#density
+ggs_density(model.ggs)
 #geweke diagnostic
-ggs_geweke(als.model.gg,frac1=0.1,frac2=0.5) + theme_classic()
+ggs_geweke(model.ggs, frac1=0.1, frac2=0.5)
 #BGR diagnostics version 1(R_c)
-ggs_Rhat(als.model.gg)+ theme_classic()
+ggs_Rhat(model.ggs)
 #BGR diagnostic version 2
-gelman.plot(als.model.mcmc)
+gelman.plot(model.mcmc)
 #time series approach to estimating monte carlo standard error(MCSE)
-summary(als.model.mcmc)
+summary(model.mcmc)
 #effective sample size
-effectiveSize(als.model.mcmc)
+effectiveSize(model.mcmc)
 ```
 
+```{r}
+print(summary(as.mcmc(als.diag.model))$statistics)
+print(summary(as.mcmc(als.diag.thin.model))$statistics)
+```
 
 
 
