@@ -1,16 +1,9 @@
 ---
-title: "R Notebook"
-output: html_notebook
+title: "Part2_1"
+author: "Stanisław Wilczyński, Mikołaj Dzięciołowski, Dominik Samorek, Michał Stypułkowski"
+date: "23 grudnia 2018"
+output: pdf_document
 ---
----
-title: "R Notebook"
-output: html_notebook
----
-
-This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
-
-Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 require(coda)
@@ -315,5 +308,9 @@ x <- gelman.diag(models.mcmc[[6]])
 ```
 ```{r}
 y<- lapply(models.jags, getDIC)
+```
+```{r}
+a5 <- summary(as.mcmc(als.model13))
+a5.quantiles
 ```
 

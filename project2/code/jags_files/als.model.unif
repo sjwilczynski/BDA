@@ -19,9 +19,9 @@ model {
   b.rand.taui[2,2] <- b.rand.sigma[2]
   b.rand.tau <- inverse(b.rand.taui[1:2, 1:2])
   
-  b.rand.sigma[1] ~ dunif(1, 100)
-  b.rand.sigma[2] ~ dunif(1, 100)
-  b.rand.corr ~ dunif(0, 1)
+  b.rand.sigma[1] ~ dunif(0, 100)
+  b.rand.sigma[2] ~ dunif(0, 100)
+  b.rand.corr ~ dunif(-1, 1)
   
   b.rand.int.means <- mean(b.rand[,1])
   b.rand.slp.means <- mean(b.rand[,2])

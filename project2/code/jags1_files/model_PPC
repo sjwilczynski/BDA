@@ -1,0 +1,91 @@
+model {
+  for(i in 1:N){
+    bin.score[i] ~ dbern(p[i])
+    logit(p[i]) <- 
+      b00 + b.rand[subject_id[i], 1] + b0_sex * sex[i] + b0_age*age[i] + 
+      (b1 + b.rand[subject_id[i], 2] + b1_sex * sex[i]+b1_age*age[i]) * time[i]
+}
+
+  for (i in 1:M) {
+    b.rand[i, 1] ~ dnorm(0, pow(b.rand.sigma, -2))
+    b.rand[i, 2] ~ dnorm(0, pow(b.rand.sigma, -2))
+    b.rand.rep[i, 1] ~ dnorm(0, pow(b.rand.sigma, -2))
+    b.rand.rep[i, 2] ~ dnorm(0, pow(b.rand.sigma, -2))
+  }
+
+  # fixed effects
+  b00 ~ dnorm(0, 1.0E-6)
+  b1 ~ dnorm(0, 1.0E-6)
+  b0_sex ~ dnorm(0, 1.0E-6)
+  b1_sex ~ dnorm(0, 1.0E-6)
+  b0_age ~ dnorm(0, 1.0E-6)
+  b1_age ~ dnorm(0, 1.0E-6)
+
+  # random effects
+  b.rand.sigma ~ dunif(0, 100)
+  
+  b.rand.int.means <- mean(b.rand[,1])
+  b.rand.slp.means <- mean(b.rand[,2])
+	        
+	               
+	     # Ranked b0s
+	
+               rank.b0[i] <- ranked( b.rand[1:N, 1],i )
+               rank.b0.rep[i] <- ranked( b.rand[1:M, 1],i )
+	
+         }
+
+          # PPCs checking distribution of random intercept
+
+          # Min and max of b0s
+
+  tmin <- ranked(b.rand[, 1], 1)
+            tmax <- ranked(b.rand[, 1],N)
+            tmin.rep <- ranked(b.rand.rep[, 1],1)
+            tmax.rep <- ranked(b.rand.rep[, 1],N)
+     
+           tmin.test <- step(tmin.rep-tmin)
+           tmax.test <- step(tmax.rep-tmax)
+
+# Checking skewness and kurtosis of the tbbmc making use of posterior mean
+
+for (i in 1:N){
+   m3.b0[i] <- pow((b.rand[i, 1])/sigmab0,3)
+   m4.b0[i] <- pow((b.rand[i, 1])/sigmab0,4)
+   m3.b0.rep[i] <- pow((b.rand.rep[i, 1])/sigmab0,3)
+   m4.b0.rep[i] <- pow((b.rand.rep[i, 1])/sigmab0,4)
+}  
+
+   m3b0 <- sum(m3.b0[])/Nsubj
+   m4b0 <- sum(m4.b0[])/Nsubj- 3
+   m3b0.rep <- sum(m3.b0.rep[])/Nsubj
+   m4b0.rep <- sum(m4.b0.rep[])/Nsubj - 3
+
+   skewness.b0.test  <- step(m3b0.rep - m3b0)
+   kurtosis.b0.test <- step(m4b0.rep-m4b0)
+
+
+# tests
+test[1] <- tmin.test
+test[2] <- tmax.test
+test[3] <- skewness.b0.test
+test[4] <- kurtosis.b0.test
+
+
+# PPC measures
+meas[1] 	<- tmin
+meas.rep[1] 	<- tmin.rep
+meas[2] 	<- tmax
+meas.rep[2] 	<- tmax.rep	
+meas[3] 	<- m3b0
+meas.rep[3] 	<- m3b0.rep	
+meas[4] 	<- m4b0
+meas.rep[4] 	<- m4b0.rep	
+	
+
+		sigmab0 ~ dunif(0,100)
+		sigma2b0  <- pow(sigmab0,2)
+		taub0 <- pow(sigma2b0,-1)
+			
+		
+	   }
