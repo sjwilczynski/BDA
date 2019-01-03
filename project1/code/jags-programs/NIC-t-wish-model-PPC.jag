@@ -57,6 +57,4 @@
     test.skewness <- step(rep.pow3.sum - sample.pow3.sum)
     test.kurtosis <- step(rep.pow4.sum - sample.pow4.sum)
     
-    error <- mean(body_weight[] - body_weight.rep[])
-    
     }
