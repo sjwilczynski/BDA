@@ -1,0 +1,148 @@
+---
+title: "PPC"
+author: "Stanisław Wilczyński, Mikołaj Dzięciołowski, Dominik Samorek, Michał Stypułkowski"
+date: "23 grudnia 2018"
+output: pdf_document
+---
+```{r}
+set.seed(32)
+```
+```{r}
+cat("model {
+  for(i in 1:N){
+    bin.score[i] ~ dbern(p[i])
+    logit(p[i]) <- 
+      b00 + b.rand[subject_id[i], 1] +  
+      (b1 + b.rand[subject_id[i], 2]) * time[i]
+}
+
+  for (i in 1:M) {
+    b.rand[i, 1] ~ dnorm(0, pow(b.rand.sigma, -2))
+    b.rand[i, 2] ~ dnorm(0, pow(b.rand.sigma, -2))
+    b.rand.rep[i, 1] ~ dnorm(0, pow(b.rand.sigma, -2))
+    b.rand.rep[i, 2] ~ dnorm(0, pow(b.rand.sigma, -2))
+	
+         
+}
+          # PPCs checking distribution of random intercept
+
+          # Min and max of b0s
+
+            tmin <- min(b.rand[1:M, 1])
+            tmax <- max(b.rand[1:M, 1])
+            tmin.rep <- min(b.rand.rep[, 1])
+            tmax.rep <- max(b.rand.rep[, 1])
+     
+           tmin.test <- step(tmin.rep-tmin)
+           tmax.test <- step(tmax.rep-tmax)
+
+
+# Checking skewness and kurtosis of the tbbmc making use of posterior mean
+for (i in 1:M){
+   m3.b0[i] <- pow((b.rand[i, 1])/sigmab0,3)
+   m4.b0[i] <- pow((b.rand[i, 1])/sigmab0,4)
+   m3.b0.rep[i] <- pow((b.rand.rep[i, 1])/sigmab0,3)
+   m4.b0.rep[i] <- pow((b.rand.rep[i, 1])/sigmab0,4)
+}  
+
+   m3b0 <- sum(m3.b0[])/M
+   m4b0 <- sum(m4.b0[])/M- 3
+   m3b0.rep <- sum(m3.b0.rep[])/M
+   m4b0.rep <- sum(m4.b0.rep[])/M - 3
+
+   skewness.b0.test  <- step(m3b0.rep - m3b0)
+   kurtosis.b0.test <- step(m4b0.rep-m4b0)
+
+
+# tests
+test[1] <- tmin.test
+test[2] <- tmax.test
+test[3] <- skewness.b0.test
+test[4] <- kurtosis.b0.test
+
+
+# PPC measures
+meas[1] 	<- tmin
+meas.rep[1] 	<- tmin.rep
+meas[2] 	<- tmax
+meas.rep[2] 	<- tmax.rep	
+meas[3] 	<- m3b0
+meas.rep[3] 	<- m3b0.rep	
+meas[4] 	<- m4b0
+meas.rep[4] 	<- m4b0.rep	
+	
+
+		sigmab0 ~ dunif(0,100)
+		sigma2b0  <- pow(sigmab0,2)
+		taub0 <- pow(sigma2b0,-1)
+
+
+  # fixed effects
+  b00 ~ dnorm(0, 1.0E-6)
+  b1 ~ dnorm(0, 1.0E-6)
+
+  # random effects
+  b.rand.sigma ~ dunif(0, 100)
+  
+  b.rand.int.means <- mean(b.rand[,1])
+  b.rand.slp.means <- mean(b.rand[,2])
+	        
+			
+		
+	   }", file="./jags1_files/model12_PPC")
+```
+
+```{r}
+als.data <- list(
+  bin.score = ALS$bin_score,
+  time = ALS$time,
+  sex = ALS$gender,
+  age = ALS$Age,
+  treatment = ALS$treatment,
+  subject_id = ALS$subject_id,
+  N = nrow(ALS),
+  b.rand.mean = c(0, 0),
+  b.R = diag(0.1, 2),
+  M = length(unique(ALS$subject_id))
+)
+als.inits = list(
+  list(
+    b0=0.5,
+    b1=-8,
+    b0_sex=0.5,
+    b1_sex = -8,
+    b.rand.sigma = 7
+  ),
+  list(
+    b0=0.4,
+    b1=-7,
+    b0_sex = 0.4,
+    b1_sex = -7,
+    b.rand.sigma = 8
+  ),
+  list(
+    b0=0.6,
+    b1=-9,
+    b0_sex = 0.6,
+    b1_sex = -9,
+    b.rand.sigma = 9
+  )
+)
+iters=50000
+# model fitting
+model_PPC <- jags(
+  als.data,
+  parameters.to.save=c("tmin.test", "tmax.test", "skewness.b0.test", "kurtosis.b0.test"),
+  n.iter=iters,
+  n.chains=3,
+  n.burnin=iters/2-1,
+  model.file="./jags1_files/model12_PPC",
+  n.thin=1,
+  DIC=T
+)
+
+model_MCMC <- as.mcmc(model_PPC)
+model_gg <- ggs(model_MCMC)
+p_D <- model_gg %>% group_by(Parameter) %>% summarise(Mean=mean(value))
+p_D
+```
