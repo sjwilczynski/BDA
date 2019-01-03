@@ -1,0 +1,63 @@
+
+    model {
+    for (i in 1:N) {
+    body_weight[i] ~ dnorm(body.mu[i], body.tau)
+    body_weight.rep[i] ~ dnorm(body.mu[i], body.tau)
+    body.mu[i] <- beta.const + beta.breed*breed[i] + beta.age*age[i] + beta.inter*age[i]*breed[i] + b[id[i],1] + b[id[i],2]*age[i]
+    }
+    
+    for (i in 1:M) {
+    b[i, 1:2] ~ dmnorm(b_mean[1:2], b.tau[1:2,1:2])
+    }
+    
+    # error SD
+    body.tau ~ dgamma(0.00001,0.00001)
+    body.sigma <- 1 / sqrt(body.tau)
+    
+    # fixed effects
+    beta.const ~ dnorm(0, 1.0E-6)
+    beta.breed ~ dnorm(0, 1.0E-6)
+    beta.age ~ dnorm(0, 1.0E-6)
+    beta.inter ~ dnorm(0, 1.0E-6)
+    
+    # random effects
+    b.tau ~ dwish(b_R[1:2,1:2], 2)
+    
+    # tests
+    
+    sample_mean <- mean(body_weight[])
+    sample_sd <- sd(body_weight[])
+    rep_mean <- mean(body_weight.rep[])
+    rep_sd <- sd(body_weight.rep[])
+    
+    # max and min
+    bw.min <- min(body_weight[])
+    bw.max <- max(body_weight[])
+    
+    bw.rep.min <- min(body_weight.rep[])
+    bw.rep.max <- max(body_weight.rep[])
+    
+    test.min <- step(bw.min - bw.rep.min)
+    test.max <- step(bw.max - bw.rep.max)
+    
+    # skewness and kurtosis
+    for (i in 1:N) {
+    sample.pow3[i] <- pow((body_weight[i] - body.mu[i]) / body.sigma, 3)
+    sample.pow4[i] <- pow((body_weight[i] - body.mu[i]) / body.sigma, 4)
+    
+    rep.pow3[i] <- pow((body_weight.rep[i] - body.mu[i]) / body.sigma, 3)
+    rep.pow4[i] <- pow((body_weight.rep[i] - body.mu[i]) / body.sigma, 4)
+    }
+    
+    sample.pow3.sum <- sum(sample.pow3[]) / N
+    sample.pow4.sum <- sum(sample.pow4[]) / N - 3
+    
+    rep.pow3.sum <- sum(rep.pow3[]) / N
+    rep.pow4.sum <- sum(rep.pow4[]) / N - 3
+    
+    test.skewness <- step(rep.pow3.sum - sample.pow3.sum)
+    test.kurtosis <- step(rep.pow4.sum - sample.pow4.sum)
+    
+    error <- mean(body_weight[] - body_weight.rep[])
+    
+    }
