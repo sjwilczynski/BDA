@@ -81,11 +81,11 @@ NIC_inits <- list(
 NIC_model_question1 <- jags(
   NIC_data,
   parameters.to.save=c("beta.breed", "beta.age", "body.sigma", "b.sigma", "b.corr"),
-  #  inits=NIC_inits,
+  inits=NIC_inits,
   n.iter=50000,
   n.chains=3,
   n.burnin=25000,
-  model.file="./project1/code/jags-programs/NIC-norm-uni-model.jag",
+  model.file="./project1/code/jags-programs/NIC-norm-wish-model.jag",
   n.thin=1,
   DIC=T
 )
@@ -95,7 +95,7 @@ NIC_model_MCMC <- as.mcmc(NIC_model_question1)
 NIC_model_gg <- ggs(NIC_model_MCMC)
 print(NIC_model_question1)
 summary(NIC_model_MCMC)
-ggmcmc(NIC_model_gg, "./project1/question1_plots-norm-uni-distribution.pdf")
+ggmcmc(NIC_model_gg, "./project1/question1_plots-norm-wish-distribution.pdf")
 superdiag(NIC_model_MCMC, burnin = 1000)
 
 
