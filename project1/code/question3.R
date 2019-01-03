@@ -59,8 +59,6 @@ cat("
     test.skewness <- step(rep.pow3.sum - sample.pow3.sum)
     test.kurtosis <- step(rep.pow4.sum - sample.pow4.sum)
     
-    error <- mean(body_weight[] - body_weight.rep[])
-    
     }", file="./project1/code/jags-programs/NIC-t-wish-model-PPC.jag")
 
 NIC_data <- list(
@@ -98,10 +96,8 @@ NIC_inits <- list(
 # model fitting
 NIC_model_question3 <- jags(
   NIC_data,
-  parameters.to.save=c("test.min", "test.max", "test.skewness", "test.kurtosis", "error",
-                       "bw.min", "bw.max", "bw.rep.min", "bw.rep.max", "rep.pow3.sum", "sample.pow3.sum",
-                       "rep.pow4.sum", "sample.pow4.sum"),
-  #inits=NIC_inits,
+  parameters.to.save=c("test.min", "test.max", "test.skewness", "test.kurtosis"),
+  inits=NIC_inits,
   n.iter=50000,
   n.chains=3,
   n.burnin=25000,

@@ -27,9 +27,9 @@ cat("
     beta.age ~ dnorm(0, 1.0E-6)
     
     # random effects
-    b.sigma[1] ~ dunif(0,2)
-    b.sigma[2] ~ dunif(0,2)
-    b.corr ~ dunif(0,1)
+    b.sigma[1] ~ dunif(0,10)
+    b.sigma[2] ~ dunif(0,10)
+    b.corr ~ dunif(-1,1)
     
     for (i in 1:2) {
     b.sigma2[i,i] <- pow(b.sigma[i], 2)
@@ -58,29 +58,32 @@ NIC_data <- list(
 
 NIC_inits <- list(
   list(
-    body.tau=22,
+    body.tau=25,
     beta.const=-0.07,
     beta.breed=-0.05,
-    beta.age=0.8
+    beta.age=0.8,
+    b.tau=matrix(c(32,0,0,58),2,2)
   ),
   list(
-    body.tau=17,
+    body.tau=25,
     beta.const=-0.02,
     beta.breed=-0.051,
-    beta.age=0.82
+    beta.age=0.82,
+    b.tau=matrix(c(32,0,0,58),2,2)
   ),
   list(
-    body.tau=14,
+    body.tau=24,
     beta.const=-0.1,
     beta.breed=-0.41,
-    beta.age=0.84
+    beta.age=0.84,
+    b.tau=matrix(c(32,0,0,58),2,2)
   )
 )
 
 # model fitting
 NIC_model_question1 <- jags(
   NIC_data,
-  parameters.to.save=c("beta.breed", "beta.age", "body.sigma", "b.sigma", "b.corr"),
+  parameters.to.save=c("beta.const", "beta.breed", "beta.age", "body.sigma", "b.sigma", "b.corr"),
   inits=NIC_inits,
   n.iter=50000,
   n.chains=3,
@@ -109,7 +112,7 @@ NIC_model_question2 <- jags(
   n.iter=50000,
   n.chains=3,
   n.burnin=25000,
-  model.file="./project1/code/jags-programs/NIC-norm-uni-model.jag",
+  model.file="./project1/code/jags-programs/NIC-norm-wish-model.jag",
   n.thin=1,
   DIC=T
 )
@@ -121,7 +124,7 @@ NIC_model_gg <- ggs(NIC_model_MCMC)
 ggs_histogram(NIC_model_gg)
 
 # Q-Q plots
-
+data <- NIC_model_gg
 error <- data$value[data$Parameter == "error"]
 b.intercept.means <- data$value[data$Parameter == "b.intercept.means"]
 b.slope.means <- data$value[data$Parameter == "b.slope.means"]
