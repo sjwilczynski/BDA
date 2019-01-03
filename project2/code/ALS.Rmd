@@ -526,4 +526,64 @@ print(summary(as.mcmc(als.diag.thin.model))$statistics)
 ```
 
 
+```{r}
+cat("model {
+  for(i in 1:N){
+    bin.score[i] ~ dbern(p[i])
+    probit(p[i]) <- b0 + b.rand[subject_id[i], 1] + (b1 + b.rand[subject_id[i], 2]) * time[i]  
+  }
+
+  for (i in 1:M) {
+    b.rand[i, 1] ~ dnorm(0, pow(b.rand.sigma, -2))
+    b.rand[i, 2] ~ dnorm(0, pow(b.rand.sigma, -2))
+  }
+
+  # fixed effects
+  b0 ~ dnorm(0, 1.0E-6)
+  b1 ~ dnorm(0, 1.0E-6)
+  
+  # random effects
+  b.rand.sigma ~ dunif(0, 100)
+  
+  b.rand.int.means <- mean(b.rand[,1])
+  b.rand.slp.means <- mean(b.rand[,2])
+}", file="./jags_files/als.model.diagonal.probit")
+
+cat("model {
+  for(i in 1:N){
+    bin.score[i] ~ dbern(p[i])
+    cloglog(p[i]) <- b0 + b.rand[subject_id[i], 1] + (b1 + b.rand[subject_id[i], 2]) * time[i]  
+  }
+
+  for (i in 1:M) {
+    b.rand[i, 1] ~ dnorm(0, pow(b.rand.sigma, -2))
+    b.rand[i, 2] ~ dnorm(0, pow(b.rand.sigma, -2))
+  }
+
+  # fixed effects
+  b0 ~ dnorm(0, 1.0E-6)
+  b1 ~ dnorm(0, 1.0E-6)
+  
+  # random effects
+  b.rand.sigma ~ dunif(0, 100)
+  
+  b.rand.int.means <- mean(b.rand[,1])
+  b.rand.slp.means <- mean(b.rand[,2])
+}", file="./jags_files/als.model.diagonal.cloglog")
+
+```
+
+
+```{r}
+iters=50000
+als.diag.probit.model <- test.model(iters, "./jags_files/als.model.diagonal.probit", data=als.ind.data, inits=als.diag.inits, monitor = c("b0", "b1", "b.rand.sigma"))
+summarise.model(als.diag.probit.model, "./../als_model_diag_probit.pdf", iters)
+
+als.diag.cloglog.model <- test.model(iters, "./jags_files/als.model.diagonal.cloglog", data=als.ind.data, inits=als.diag.inits, monitor = c("b0", "b1", "b.rand.sigma"))
+summarise.model(als.diag.cloglog.model, "./../als_model_diag_cloglog.pdf", iters)
+```
+```{r}
+print(summary(as.mcmc(als.diag.model)))
+summary(as.mcmc(als.diag.cloglog.model))
+```
 
